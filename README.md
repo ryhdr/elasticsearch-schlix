@@ -9,8 +9,8 @@ Search alternative for [SCHLIX CMS](https://www.schlix.com) backed by [Elasticse
 
 #### Admin page
 ![admin](screenshots/elasticsearchadmin.png)
-![config general](elasticsearchconfiggeneral.png)
-![config advaced](elasticsearchconfigadvanced.png)
+![config general](screenshots/elasticsearchconfiggeneral.png)
+![config advanced](screenshots/elasticsearchconfigadvanced.png)
 
 ## License
 
