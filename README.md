@@ -4,8 +4,8 @@ Search alternative for [SCHLIX CMS](https://www.schlix.com) backed by [Elasticse
 ## Screenshots
 
 #### Search result page
-![result1](screenshots/elasticsearchresult1)
-![result2](screenshots/elasticsearchresult2)
+![result1](screenshots/elasticsearchresult1.png)
+![result2](screenshots/elasticsearchresult2.png)
 
 #### Admin page
 ![admin](screenshots/elasticsearchadmin.png)
