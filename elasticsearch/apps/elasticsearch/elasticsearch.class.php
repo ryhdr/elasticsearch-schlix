@@ -30,6 +30,33 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
     }
 
     /**
+     * Set config to default when $invalidCheck true.
+     * @global \SCHLIX\cmsConfigRegistry $SystemConfig
+     * @param string $name
+     * @param mixed $default
+     * @param string|function $invalidCheck
+     */
+    private function configDefault($name, $default, $invalidCheck) {
+        global $SystemConfig;
+        switch ($invalidCheck) {
+            case 'presence':
+                $result = !$this->configs[$name];
+                break;
+            case 'numgt0':
+                $result = (int) $this->configs[$name] <= 0;
+            case 'num':
+                $result = $result || is_null($this->configs[$name]) || !is_numeric($this->configs[$name]);
+                break;
+            default:
+                $result = $invalidCheck($this->configs[$name]);
+        }
+        if ($result) {
+            $this->configs[$name] = $default;
+            $SystemConfig->set($this->app_name, $name, $this->configs[$name]);
+        }
+    }
+
+    /**
      * Load and initialize configurations.
      * @global \SCHLIX\cmsConfigRegistry $SystemConfig
      */
@@ -37,30 +64,16 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         global $SystemConfig;
         $this->configs = $SystemConfig->get($this->app_name);
 
-        if(!is_numeric($this->configs['int_value_max_length']) || (int) $this->configs['int_value_max_length'] < 0) {
-            $this->configs['int_value_max_length'] = NULL;
-            $SystemConfig->set($this->app_name, 'int_value_max_length', $this->configs['int_value_max_length']);
-        }
-        if(!$this->configs['int_elastic_cloud']) {
-            $this->configs['int_elastic_cloud'] = 3;
-            $SystemConfig->set($this->app_name, 'int_elastic_cloud', $this->configs['int_elastic_cloud']);
-        }
-        if(!$this->configs['str_index_name']) {
-            $this->configs['str_index_name'] = 'schlixcms';
-            $SystemConfig->set($this->app_name, 'str_index_name', $this->configs['str_index_name']);
-        }
-        if (___c($this->configs['array_enabled_apps']) == 0 || !is_array($this->configs['array_enabled_apps'])) {
-            $this->configs['array_enabled_apps'] = ['html', 'blog'];
-            $SystemConfig->set($this->app_name, 'array_enabled_apps', $this->configs['array_enabled_apps']);
-        }
-        if(!is_numeric($this->configs['int_per_page']) || (int) $this->configs['int_per_page'] <= 0) {
-            $this->configs['int_per_page'] = 10;
-            $SystemConfig->set($this->app_name, 'int_per_page', $this->configs['int_per_page']);
-        }
-        if(is_null($this->configs['int_fuzziness']) || !is_numeric($this->configs['int_fuzziness'])) {
-            $this->configs['int_fuzziness'] = 0;
-            $SystemConfig->set($this->app_name, 'int_fuzziness', $this->configs['int_fuzziness']);
-        }
+        $this->configDefault('int_value_max_length', NULL, 'numgt0');
+        $this->configDefault('int_elastic_cloud', 3, 'presence');
+        $this->configDefault('str_index_name', 'schlixcms', 'presence');
+        $this->configDefault('array_enabled_apps', ['html', 'blog'], function($v){
+            return !___c($v) == 0 || !is_array($v);
+        });
+        $this->configDefault('int_per_page', 10, 'numgt0');
+        $this->configDefault('int_fuzziness', 0, 'num');
+        $this->configDefault('int_shards', 1, 'numgt0');
+        $this->configDefault('int_replicas', 1, 'numgt0');
     }
 
     /**
@@ -144,13 +157,13 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         $index_name = $this->configs['str_index_name'];
 
         if (!$this->client()->indices()->exists(['index' => $index_name])) {
+            // TODO: update index settings on config update
             $params = [
                 'index' => $index_name,
                 'body' => [
                     'settings' => [
-                        // TODO: configurable?
-                        'number_of_shards' => 1,
-                        'number_of_replicas' => 1
+                        'number_of_shards' => $this->configs['int_shards'],
+                        'number_of_replicas' => $this->configs['int_replicas']
                     ],
                     'mappings' => [
                         '_source' => [
