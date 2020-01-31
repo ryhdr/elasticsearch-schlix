@@ -1,19 +1,7 @@
 <?php
-/**
- * Elastic Search - Main Admin view
- * 
- * An alternative site search function for SCHLIX CMS using Elasticsearch. Combo extension consisting of App and Block.
- *
- * @copyright 2020 Roy H
- *
- * @license MIT
- *
- * @package elasticsearch
- * @version 1.0
- * @author  Roy H <ryhdr@maysora.com>
- * @link    https://github.com/ryhdr/elasticsearch-schlix
- */
 if (!defined('SCHLIX_VERSION')) die('No Access');
+
+$indexExists = $this->app->isConfigured() && $this->app->isIndexExists();
 ?>
 <!-- {top_menu} -->
 <x-ui:schlix-data-explorer-blank data-schlix-controller="SCHLIX.CMS.ElasticSearchAdminController" >
@@ -24,7 +12,12 @@ if (!defined('SCHLIX_VERSION')) die('No Access');
             <x-ui:schlix-explorer-menu-command data-schlix-command="config" data-schlix-app-action="editconfig" fonticon="fas fa-cog" label="<?= ___('Configuration') ?>" />
             <!-- {end config -->
             <?php if($this->app->isConfigured()): ?>
-                <x-ui:schlix-explorer-menu-command data-schlix-command="updateindex" data-schlix-app-action="updateindex" fonticon="fas fa-exclamation-circle" label="<?= ___('Manually Update Index') ?>" />
+                <?php if($indexExists): ?>
+                    <x-ui:schlix-explorer-menu-command data-schlix-command="updateindex" data-schlix-app-action="updateindex" fonticon="fas fa-exclamation-circle" label="<?= ___('Manually Update Index') ?>" />
+                    <x-ui:schlix-explorer-menu-command data-schlix-command="deleteindex" data-schlix-app-action="deleteindex" fonticon="fas fa-exclamation-circle" label="<?= ___('Delete Index') ?>" />
+                <?php else: ?>
+                    <x-ui:schlix-explorer-menu-command data-schlix-command="initindex" data-schlix-app-action="initindex" fonticon="fa fa-search" label="<?= ___('Initialize Search Index') ?>" />
+                <?php endif ?>
             <?php endif ?>
             <?= \SCHLIX\cmsHooks::output('getApplicationAdminExtraToolbarMenuItem', $this) ?>
         </x-ui:schlix-explorer-toolbar-menu>
@@ -70,6 +63,9 @@ if (!defined('SCHLIX_VERSION')) die('No Access');
                                     use Public address instead of Internal address.<br />
                                     In this case for security reason the address should only be accessible by Schlix CMS.
                                 </dd>
+                                <dd>
+                                    For AWS use port 80 (HTTP) or 443 (HTTPS) instead of default port 9200.
+                                </dd>
                             </dl>
                         </li>
                         <li>
@@ -85,16 +81,15 @@ if (!defined('SCHLIX_VERSION')) die('No Access');
                     <p>
                         Enter the host information in
                         <a href="<?= $this->createFriendlyAdminURL('action=editconfig'); ?>" data-schlix-command="config" data-schlix-app-action="editconfig" class="schlix-command-button"><i class="fas fa-cog " aria-hidden="true"></i> Configuration</a>.
-                        Then manually update index for index initialization.
                     </p>
                 </li>
             </ol>
+        <?php elseif (!$indexExists): ?>
+            <x-ui:well>
+                Elasticsearch configured but search index not yet created.
+            </x-ui:well>
         <?php else: ?>
             <h4>Elasticsearch configured, start using search by placing Elasticsearch block on appropriate location.</h4>
-            <x-ui:well>
-                If Elasticsearch newly configured or you recently changes the host or index name, please
-                update the index so search working properly.
-            </x-ui:well>
             <p>
                 This app will automatically update search index once per day.<br />
                 You can change the frequency at <strong>Settings > System Scheduler > Elasticsearch update index</strong>.<br />

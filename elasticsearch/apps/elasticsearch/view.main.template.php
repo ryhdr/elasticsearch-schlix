@@ -1,18 +1,4 @@
 <?php
-/**
- * Elastic Search - Main page view (frontend)
- * 
- * An alternative site search function for SCHLIX CMS using Elasticsearch. Combo extension consisting of App and Block.
- *
- * @copyright 2020 Roy H
- *
- * @license MIT
- *
- * @package elasticsearch
- * @version 1.0
- * @author  Roy H <ryhdr@maysora.com>
- * @link    https://github.com/ryhdr/elasticsearch-schlix
- */
 if (!defined('SCHLIX_VERSION')) die('No Access');
 
 $cached_app = [];

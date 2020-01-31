@@ -1,17 +1,3 @@
-/**
- * Elastic Search - Javascript admin controller class
- *
- * An alternative site search function for SCHLIX CMS using Elasticsearch. Combo extension consisting of App and Block.
- *
- * @copyright 2020 Roy H
- *
- * @license MIT
- *
- * @package elasticsearch
- * @version 1.0
- * @author  Roy H <ryhdr@maysora.com>
- * @link    https://github.com/ryhdr/elasticsearch-schlix
- */
 SCHLIX.CMS.ElasticSearchAdminController = class extends SCHLIX.CMS.BaseController  {  
     /**
      * Constructor
@@ -53,9 +39,18 @@ SCHLIX.CMS.ElasticSearchAdminController = class extends SCHLIX.CMS.BaseControlle
                 this.redirectToCMSCommand("editconfig");
                 return true;
                 break;
+            case 'initindex':
+                this.redirectToCMSCommand("updateindex");
+                return true;
+                break;
             case 'updateindex':
                 if (confirm('Manually update index?\n( To avoid problem please don\'t update too frequently )' ))
                     this.redirectToCMSCommand("updateindex");
+                return true;
+                break;
+            case 'deleteindex':
+                if (confirm('Delete index? Search will not working until you created the index again.' ))
+                    this.redirectToCMSCommand("deleteindex");
                 return true;
                 break;
             default:

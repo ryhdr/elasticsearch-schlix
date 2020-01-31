@@ -1,19 +1,5 @@
 <?php
 namespace App;
-/**
- * Elastic Search - Main Class
- * 
- * An alternative site search function for SCHLIX CMS using Elasticsearch. Combo extension consisting of App and Block.
- * 
- * @copyright 2020 Roy H
- *
- * @license MIT
- *
- * @package elasticsearch
- * @version 1.0
- * @author  Roy H <ryhdr@maysora.com>
- * @link    https://github.com/ryhdr/elasticsearch-schlix
- */
 class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
 
 
@@ -25,8 +11,6 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         parent::__construct("Elastic Search");
         $this->has_versioning = false;
         $this->disable_frontend_runtime = false;
-
-        $this->initConfigs();
     }
 
     /**
@@ -40,19 +24,19 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         global $SystemConfig;
         switch ($invalidCheck) {
             case 'presence':
-                $result = !$this->configs[$name];
+                $result = !$this->_configs[$name];
                 break;
             case 'numgt0':
-                $result = (int) $this->configs[$name] <= 0;
+                $result = (int) $this->_configs[$name] <= 0;
             case 'num':
-                $result = $result || is_null($this->configs[$name]) || !is_numeric($this->configs[$name]);
+                $result = $result || is_null($this->_configs[$name]) || !is_numeric($this->_configs[$name]);
                 break;
             default:
-                $result = $invalidCheck($this->configs[$name]);
+                $result = $invalidCheck($this->_configs[$name]);
         }
         if ($result) {
-            $this->configs[$name] = $default;
-            $SystemConfig->set($this->app_name, $name, $this->configs[$name]);
+            $this->_configs[$name] = $default;
+            $SystemConfig->set($this->app_name, $name, $this->_configs[$name]);
         }
     }
 
@@ -60,20 +44,25 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
      * Load and initialize configurations.
      * @global \SCHLIX\cmsConfigRegistry $SystemConfig
      */
-    private function initConfigs() {
+    public function configs($use_cache = true) {
         global $SystemConfig;
-        $this->configs = $SystemConfig->get($this->app_name);
+        if(!$this->_configs || !$use_cache) {
+            $SystemConfig->clearCache($this->app_name);
+            $this->_configs = $SystemConfig->get($this->app_name);
 
-        $this->configDefault('int_value_max_length', NULL, 'numgt0');
-        $this->configDefault('int_elastic_cloud', 3, 'presence');
-        $this->configDefault('str_index_name', 'schlixcms', 'presence');
-        $this->configDefault('array_enabled_apps', ['html', 'blog'], function($v){
-            return !___c($v) == 0 || !is_array($v);
-        });
-        $this->configDefault('int_per_page', 10, 'numgt0');
-        $this->configDefault('int_fuzziness', 0, 'num');
-        $this->configDefault('int_shards', 1, 'numgt0');
-        $this->configDefault('int_replicas', 1, 'numgt0');
+            $this->configDefault('int_value_max_length', NULL, 'numgt0');
+            $this->configDefault('int_elastic_cloud', 3, 'presence');
+            $this->configDefault('str_index_name', 'schlixcms', 'presence');
+            $this->configDefault('array_enabled_apps', ['html', 'blog'], function($v){
+                return ___c($v) == 0 || !is_array($v);
+            });
+            $this->configDefault('int_per_page', 10, 'numgt0');
+            $this->configDefault('int_fuzziness', 0, 'num');
+            $this->configDefault('int_shards', 1, 'numgt0');
+            $this->configDefault('int_replicas', 1, 'numgt0');
+        }
+        
+        return $this->_configs;
     }
 
     /**
@@ -82,7 +71,7 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
      */
     private function getHosts() {
         if (!isset($this->hosts)) {
-            $hosts = trim($this->configs['str_hosts']);
+            $hosts = trim($this->configs()['str_hosts']);
             $this->hosts = ($hosts) ? explode( "\n", $hosts) : [];
         }
         return $this->hosts;
@@ -94,27 +83,27 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
      */
     private function client() {
         if (!$this->client) {
-            switch ($this->configs['int_elastic_cloud']) {
+            switch ($this->configs()['int_elastic_cloud']) {
                 case 1: // elasticcloud basic auth
-                    if (!$this->configs['str_ec_id'] || !$this->configs['str_ec_user'] || !$this->configs['str_ec_pass']) {
+                    if (!$this->configs()['str_ec_id'] || !$this->configs()['str_ec_user'] || !$this->configs()['str_ec_pass']) {
                         return NULL;
                     }
                     $this->client = \Elasticsearch\ClientBuilder::create()
-                                        ->setElasticCloudId($this->configs['str_ec_id'])
+                                        ->setElasticCloudId($this->configs()['str_ec_id'])
                                         ->setBasicAuthentication(
-                                                $this->configs['str_ec_user'],
-                                                $this->configs['str_ec_pass'])
+                                                $this->configs()['str_ec_user'],
+                                                $this->configs()['str_ec_pass'])
                                         ->build();
                     break;
                 case 2: // elasticcloud api key
-                    if (!$this->configs['str_ec_id'] || !$this->configs['str_ec_api_id'] || !$this->configs['str_ec_api_key']) {
+                    if (!$this->configs()['str_ec_id'] || !$this->configs()['str_ec_api_id'] || !$this->configs()['str_ec_api_key']) {
                         return NULL;
                     }
                     $this->client = \Elasticsearch\ClientBuilder::create()
-                                        ->setElasticCloudId($this->configs['str_ec_id'])
+                                        ->setElasticCloudId($this->configs()['str_ec_id'])
                                         ->setApiKey(
-                                                $this->configs['str_ec_api_id'],
-                                                $this->configs['str_ec_api_key'])
+                                                $this->configs()['str_ec_api_id'],
+                                                $this->configs()['str_ec_api_key'])
                                         ->build();
                     break;
                 default: // self / 3rd party hosted
@@ -146,60 +135,90 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         return !!$this->client();
     }
 
+    public function isIndexExists() {
+        if (!$this->isConfigured())
+            return false;
+        $index_name = $this->configs()['str_index_name'];
+        return $this->client()->indices()->exists(['index' => $index_name]);
+    }
+
     /**
      * Create a new index if it doesn't exists.
      * https://www.elastic.co/guide/en/elasticsearch/reference/7.4/indices-create-index.html
+     * https://www.elastic.co/guide/en/elasticsearch/reference/7.4/indices-update-settings.html
+     * @param bool $force_update
      * @return string
      */
-    private function initIndex() {
+    public function initIndex($force_update = false) {
         if (!$this->isConfigured())
             return NULL;
-        $index_name = $this->configs['str_index_name'];
-
+        $index_name = $this->configs()['str_index_name'];
+        $params = [
+            'index' => $index_name,
+            'body' => [
+                'settings' => [
+                    'number_of_replicas' => $this->configs()['int_replicas']
+                ]
+            ]
+        ];
         if (!$this->client()->indices()->exists(['index' => $index_name])) {
-            // TODO: update index settings on config update
-            $params = [
-                'index' => $index_name,
-                'body' => [
-                    'settings' => [
-                        'number_of_shards' => $this->configs['int_shards'],
-                        'number_of_replicas' => $this->configs['int_replicas']
-                    ],
-                    'mappings' => [
-                        '_source' => [
-                            'enabled' => true
-                        ],
-                        'properties' => [
-                            'id' => ['type' => 'long', 'index' => false],
-                            'virtual_name' => ['type' => 'keyword'],
-                            'title' => ['type' => 'text'],
-                            'summary' => ['type' => 'text'],
-                            'description_alternative_title' => ['type' => 'text', 'norms' => false],
-                            'summary_secondary_headline' => ['type' => 'text', 'norms' => false],
-                            'description' => ['type' => 'text'],
-                            'description_secondary_headline' => ['type' => 'text', 'norms' => false],
-                            'date_created' => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
-                            'date_modified' => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
-                            'meta_key' => ['type' => 'keyword'],
-                            'meta_description' => ['type' => 'text'],
-                            'tags' => ['type' => 'keyword'],
-                            'url_media_file' => ['type' => 'text', 'index' => false, 'norms' => false],
-                            'link' => ['type' => 'text', 'index' => false, 'norms' => false],
-                            'app_name' => ['type' => 'keyword'],
-                            'index_timestamp' => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss']
-                        ]
-                    ]
+            $params['body']['settings']['number_of_shards'] = $this->configs()['int_shards'];
+            $params['body']['mappings'] = [
+                '_source' => [
+                    'enabled' => true
+                ],
+                'properties' => [
+                    'id' => ['type' => 'long', 'index' => false],
+                    'virtual_name' => ['type' => 'keyword'],
+                    'title' => ['type' => 'text'],
+                    'summary' => ['type' => 'text'],
+                    'description_alternative_title' => ['type' => 'text', 'norms' => false],
+                    'summary_secondary_headline' => ['type' => 'text', 'norms' => false],
+                    'description' => ['type' => 'text'],
+                    'description_secondary_headline' => ['type' => 'text', 'norms' => false],
+                    'date_created' => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
+                    'date_modified' => ['type' => 'date', 'format' => 'yyyy-MM-dd HH:mm:ss'],
+                    'meta_key' => ['type' => 'keyword'],
+                    'meta_description' => ['type' => 'text'],
+                    'tags' => ['type' => 'keyword'],
+                    'url_media_file' => ['type' => 'text', 'index' => false, 'norms' => false],
+                    'link' => ['type' => 'text', 'index' => false, 'norms' => false],
+                    'app_name' => ['type' => 'keyword'],
+                    'index_unix_timestamp' => ['type' => 'long']
                 ]
             ];
             $response = $this->client()->indices()->create($params);
             if(!$response['acknowledged'])
                 return NULL;
             if ($index_name != $response['index']) {
-                $this->configs['str_index_name'] = $index_name = $response['index'];
-                $SystemConfig->set($this->app_name, 'str_index_name', $this->configs['str_index_name']);
+                $this->configs()['str_index_name'] = $index_name = $response['index'];
+                $SystemConfig->set($this->app_name, 'str_index_name', $this->configs()['str_index_name']);
             }
+        } elseif ($force_update) {
+            $response = $this->client()->indices()->putSettings($params);
+            if(!$response['acknowledged'])
+                return NULL;
         }
         return $index_name;
+    }
+
+    /**
+     * Delete index.
+     * @global \SCHLIX\cmsLogger $SystemLog
+     * @return boolean
+     */
+    public function deleteIndex() {
+        global $SystemLog;
+        
+        if (!$this->isConfigured())
+            return false;
+        $index_name = $this->configs()['str_index_name'];
+        $response = $this->client()->indices()->delete(['index' => $index_name, 'ignore_unavailable' => true]);
+        if(!$response['acknowledged'])
+            return false;
+
+        $SystemLog->info('Delete index '.$index_name.' success.', $this->app_name);
+        return true;
     }
 
     /**
@@ -213,12 +232,12 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         global $SystemLog;
 
         try {
-            $responses = $this->client()->bulk(['body' => $records]);
+            $responses = $this->client()->bulk(['refresh' => 'wait_for', 'body' => $records]);
             if ($responses['errors']) {
                 $SystemLog->error("Error indexing bulk records:\n" . var_dump($responses['items']), $this->app_name);
             }
             return $responses;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $count = count($records);
             if ($count < 4) // single item
                 $item_info = "item: " .
@@ -237,10 +256,10 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
      *
      * @global \SCHLIX\cmsLogger $SystemLog
      * @param string $index_name
-     * @param datetime $time
+     * @param int $timestamp
      * @return array ['success' => [bool], 'count' => [int]]
      */
-    private function deleteOldRecords($index_name, $time) {
+    private function deleteOldRecords($index_name, $timestamp) {
         global $SystemLog;
         $params = [
             'index' => $index_name,
@@ -249,8 +268,8 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
             'body' => [
                 'query' => [
                     'range' => [
-                        'index_timestamp' => [
-                            'lt' => $time
+                        'index_unix_timestamp' => [
+                            'lt' => ($timestamp - 1)
                         ]
                     ]
                 ]
@@ -258,7 +277,7 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         ];
         try {
             $response = $this->client()->deleteByQuery($params);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $SystemLog->error("Error deleting old records.\n" . $e->getMessage(), $this->app_name);
         }
         return ['success' => true, 'count' => $response['deleted']];
@@ -274,12 +293,24 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
             case 'string':
                 // TODO: filter out macro keywords when possible
                 $value = strip_tags($value);
-                if((int) $this->configs['int_value_max_length'] > 0) {
-                    return mb_strimwidth($value, 0, $this->configs['int_value_max_length'], '..', 'utf-8');
+                if((int) $this->configs()['int_value_max_length'] > 0) {
+                    return mb_strimwidth($value, 0, $this->configs()['int_value_max_length'], '..', 'utf-8');
                 }
             default:
                 return $value;
         }
+    }
+
+    /**
+     * Return array of indexed atttributes.
+     * @return array
+     */
+    private function getIndexedAttributes() {
+        return [
+            'id', 'virtual_filename', 'title', 'summary', 'description_alternative_title',
+            'summary_secondary_headline', 'description', 'description_secondary_headline',
+            'date_created', 'date_modified', 'meta_key', 'meta_description', 'tags', 'url_media_file'
+        ];
     }
 
     /**
@@ -288,14 +319,9 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
      * @return array
      */
     private function getItemAttributes($item) {
-        $indexed_attributes = [
-            'id', 'virtual_filename', 'title', 'summary', 'description_alternative_title',
-            'summary_secondary_headline', 'description', 'description_secondary_headline',
-            'date_created', 'date_modified', 'meta_key', 'meta_description', 'tags', 'url_media_file'
-        ];
         $attributes = [];
         foreach ($item as $key => $value) {
-            if(in_array($key, $indexed_attributes)) {
+            if(in_array($key, $this->getIndexedAttributes())) {
                 $attributes[$key] = $this->getValueForIndexing($value);
             }
         }
@@ -305,11 +331,12 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
     /**
      * Get all app items which available for indexing.
      * @param object $app
-     * @param datetime $current_time
+     * @param int $timestamp
      * @return array
      */
-    private function getItemsForApp($app, $current_time) {
+    private function getItemsForApp($app, $timestamp) {
         if (method_exists($app, 'getAllItems')) {
+            $current_time = date('Y-m-d H:i:s', $timestamp);
             $current_time_str = sanitize_string($current_time);
             $invalid_date_str = sanitize_string(NULL_DATE);
             $sql_criteria_arr = [];
@@ -331,25 +358,25 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
     /**
      * Create / update index for specified app.
      * @param string $app_name
-     * @param datetime $current_time
+     * @param int $timestamp
      * @return array ['success' => [bool], 'count' => [int], 'message' => [string]]
      */
-    private function updateIndexForApp($app_name, $current_time) {
+    private function updateIndexForApp($app_name, $timestamp) {
         $count = 0;
 
         $app_class_name = '\\App\\' . $app_name;
         $app = new $app_class_name;
-        $items = $this->getItemsForApp($app, $current_time);
+        $items = $this->getItemsForApp($app, $timestamp);
         $records = [];
         foreach ($items as $item) {
             $attributes = array_merge([
                 'link' => $app->createFriendlyURL("action=viewitem&id={$item['id']}"),
                 'app_name' => $app_name,
-                'index_timestamp' => $current_time
+                'index_unix_timestamp' => $timestamp
             ], $this->getItemAttributes($item));
             $records[] = [
                 'index' => [
-                    '_index' => $this->configs['str_index_name'],
+                    '_index' => $this->configs()['str_index_name'],
                     '_id' => $app_name.'-'.$attributes['id']
                 ]
             ];
@@ -387,17 +414,17 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
         $apps = $this->supportedApplications();
         $index_name = $this->initIndex();
 
-        $current_time = get_current_datetime();
+        $timestamp = time();
         $count = 0;
         foreach ($apps as $app_name) {
-            if (in_array($app_name, $this->configs['array_enabled_apps'])) {
-                $result = $this->updateIndexForApp($app_name, $current_time);
+            if (in_array($app_name, $this->configs()['array_enabled_apps'])) {
+                $result = $this->updateIndexForApp($app_name, $timestamp);
                 if ($result['success']) {
                     $count += $result['count'];
                 }
             }
         }
-        $result = $this->deleteOldRecords($index_name, $current_time);
+        $result = $this->deleteOldRecords($index_name, $timestamp);
         $deleted_count = $result['count'];
 
         $message = "$count records added/updated, $deleted_count records deleted.";
@@ -422,16 +449,17 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
     /**
      * Simple text search, with optional searched fields.
      * TODO: highlight https://www.elastic.co/guide/en/elasticsearch/reference/7.4/search-request-body.html#request-body-search-highlighting
+     * @global \SCHLIX\cmsLogger $SystemLog
      * @param string $query
      * @param array $fields
      * @return array
      */
     private function textSearch($query, $fields = NULL) {
+        global $SystemLog;
         if (!$this->isConfigured()) {
             return ['success' => false, 'message' => "App not configured."];
         }
-        $index_name = $this->configs['str_index_name'];
-        if (!$index_name) {
+        if (!$this->isIndexExists()) {
             return ['success' => false, 'message' => "Search data not available."];
         }
         $query = trim($query);
@@ -439,13 +467,14 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
             $fields = [
                 'title^5',
                 'virtual_filename^2', 'meta_key^2', 'tags^2', 'summary^2',
-                '*'
+                'description_alternative_title', 'summary_secondary_headline',
+                'description_secondary_headline', 'meta_description'
             ];
         }
         $per_page = $this->getNumberOfListingsPerPage();
         $page = max(fget_int('pg'), 1);
         $from = ($page - 1) * $per_page;
-        $fuzziness = $this->configs['int_fuzziness'];
+        $fuzziness = $this->configs()['int_fuzziness'];
         if (!is_numeric($fuzziness) || $fuzziness > 2 || $fuzziness < 0) {
             $fuzziness = 'AUTO:3,6';
         }
@@ -464,7 +493,12 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
             ]
         ];
 
-        $results = $this->client()->search($params);
+        try {
+            $results = $this->client()->search($params);
+        } catch (\Exception $e) {
+            $SystemLog->error("Error searching for ".___h($query).".\n".$e->getMessage(), $this->app_name);
+            return ['success' => false, 'message' => 'Unexpeted error while searching.'];
+        }
         $hits = $results['hits']['hits'];
         $total_page = (int) ceil($results['hits']['total']['value'] / $per_page);
         return [
@@ -476,7 +510,7 @@ class ElasticSearch extends \SCHLIX\cmsApplication_Basic {
     }
 
     public function getNumberOfListingsPerPage() {
-        return $this->configs['int_per_page'];
+        return $this->configs()['int_per_page'];
     }
 
 
