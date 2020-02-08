@@ -22,11 +22,13 @@ $app_list = $this->app->supportedApplications();
                             <schlix-config:app_description />
                             <schlix-config:checkbox config-key='bool_disable_app' label='<?= ___('Disable application') ?>' />
                         </x-ui:row>
-                        <schlix-config:checkboxgroup config-key="array_enabled_apps" label="<?=  ___('Index the following applications') ?>">
-                            <?php foreach ($app_list as $enabled_app): ?>
-                                <schlix-config:option value='<?= $enabled_app ?>'><?= $enabled_app ?></schlix-config:option>
-                            <?php endforeach ?>
-                        </schlix-config:checkboxgroup>
+                        <x-ui:row>
+                            <schlix-config:checkboxgroup config-key="array_enabled_apps" label="<?=  ___('Index the following applications') ?>">
+                                <?php foreach ($app_list as $enabled_app): ?>
+                                    <schlix-config:option value='<?= $enabled_app ?>'><?= $enabled_app ?></schlix-config:option>
+                                <?php endforeach ?>
+                            </schlix-config:checkboxgroup>
+                        </x-ui:row>
                         <x-ui:row>
                             <schlix-config:textbox config-key='int_per_page' label='<?= ___('Number of listing per page') ?>' type="number" />
                         </x-ui:row>
@@ -94,6 +96,13 @@ $app_list = $this->app->supportedApplications();
                             <x-ui:column sm="6">
                                 <schlix-config:textbox config-key='int_value_max_length' label='<?= ___('Text value max. length') ?>' type="number" />
                                 <span class="help-text"><?= ___('Determine text maximum length to be indexed. Leaves blank to index everything.') ?></span>
+                            </x-ui:column>
+                        </x-ui:row>
+                        <x-ui:row>
+                            <x-ui:column sm="12">
+                                <hr />
+                                <schlix-config:checkbox config-key='bool_public_items_only' label='<?= ___('Exclude non-public items') ?>' />
+                                <span class="help-text text-warning"><?= ___('Enabling this option will make search to only find publicly readable items, regardless of logged-in user groups.') ?></span><br />
                             </x-ui:column>
                         </x-ui:row>
                     </x-ui:container>

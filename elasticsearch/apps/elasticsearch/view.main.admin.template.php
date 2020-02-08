@@ -2,6 +2,15 @@
 if (!defined('SCHLIX_VERSION')) die('No Access');
 
 $indexExists = $this->app->isConfigured() && $this->app->isIndexExists();
+$last_update = date_create()->setTimestamp($this->app->config('int_last_index_update'));
+if($last_update) {
+    $last_update_str = $this->getDateTimeDiffStr(date_create('now'), $last_update);
+}
+if(!$last_update_str) {
+    $last_update_str = ___('Never');
+} else {
+    $last_update_str = $last_update_str . ' ' . ___('ago');
+}
 ?>
 <!-- {top_menu} -->
 <x-ui:schlix-data-explorer-blank data-schlix-controller="SCHLIX.CMS.ElasticSearchAdminController" >
@@ -90,6 +99,10 @@ $indexExists = $this->app->isConfigured() && $this->app->isIndexExists();
             </x-ui:well>
         <?php else: ?>
             <h4>Elasticsearch configured, start using search by placing Elasticsearch block on appropriate location.</h4>
+            <p>
+                <?= ___('Last index update at:') ?>
+                <strong><?= $last_update_str ?></strong>
+            </p>
             <p>
                 This app will automatically update search index once per day.<br />
                 You can change the frequency at <strong>Settings > System Scheduler > Elasticsearch update index</strong>.<br />
